@@ -1,0 +1,360 @@
+
+
+Project Overview
+
+Build a full-stack Team Management Web Application with role-based access, task assignment & tracking, and a package management system.
+The app will be used by an internal team and admins.
+The system must be secure, modular, scalable, and fully functional (no dummy features).
+
+Use Neon (serverless PostgreSQL) as the cloud database.
+All features must be fully wired to the database and working end-to-end.
+
+Tech Requirements
+
+Frontend: Modern web UI (React / Next.js style)
+
+Backend: API-driven architecture
+
+Database: Neon PostgreSQL
+
+Authentication: Email + password
+
+Role-based authorization
+
+Clean component-based structure
+
+Dark, professional UI
+
+User Roles
+1️⃣ Admin (Super User)
+
+Full system access
+
+Can manage users, tasks, and packages
+
+Can approve or reject user signup requests
+
+Can edit everything
+
+2️⃣ Team Member (User)
+
+Limited access based on permissions
+
+Can view & manage assigned tasks
+
+Can view packages (read-only)
+
+Can update own profile & settings
+
+Authentication & Login Flow (IMPORTANT)
+Login Page
+
+Fields:
+
+Email
+
+Password
+
+Browser should support saved credentials (standard behavior)
+
+Signup Page
+
+Fields:
+
+Email
+
+Password
+
+Button: “Request Admin Approval”
+
+User cannot access the app until approved by Admin
+
+Admin Special Login Logic
+
+Admin email is predefined (will be provided via environment variables)
+
+When admin enters this email:
+
+Show two password fields
+
+Both passwords must be correct
+
+Admin can later change these passwords from Settings
+
+App Layout & Navigation
+Common Layout
+
+Profile icon at the top
+
+Feature panel below (left sidebar for admin, top navbar for users)
+
+Clean dark theme UI
+
+Admin Navigation (Sidebar)
+
+Dashboard
+
+Approval Requests
+
+User Management
+
+Task Management
+
+Package Management
+
+Settings
+
+User Navigation (Navbar)
+
+Dashboard
+
+My Tasks
+
+Packages
+
+Profile
+
+Settings
+
+Logout
+
+CORE FEATURE 1: Team & Task Management (FULLY FUNCTIONAL)
+Task Creation (Admin)
+
+Admin can:
+
+Create tasks with:
+
+Title
+
+Description
+
+Priority (Low / Medium / High)
+
+Status (To Do / In Progress / Completed)
+
+Due date
+
+Assigned user(s)
+
+Edit or delete tasks
+
+Reassign tasks
+
+Task Tracking
+
+Each task tracks:
+
+Assigned user
+
+Created by
+
+Status changes
+
+Last updated time
+
+Users can:
+
+View only their assigned tasks
+
+Update task status
+
+Add comments / updates
+
+Task Dashboard
+
+Admin sees:
+
+All tasks
+
+Filters by user, status, priority
+
+User sees:
+
+Only assigned tasks
+
+Progress overview
+
+CORE FEATURE 2: Package Management System
+Package Categories
+
+Create 4 package divisions:
+
+Tech
+
+Branding
+
+Growth
+
+Consulting
+
+Package Structure
+
+Each package:
+
+Has multiple tiers (Starter / Business / Scale etc.)
+
+Displayed as SaaS-style cards
+
+Clicking a card expands details below
+
+Includes:
+
+Features list
+
+Scope table
+
+Ideal for section
+
+Optional add-ons
+
+What’s included / not included
+
+Admin Controls
+
+Admin can:
+
+Create, edit, or delete packages
+
+Edit tiers, features, and text
+
+Control visibility (active/inactive)
+
+User Access
+
+Users can:
+
+View packages only
+
+Cannot edit any package data
+
+All package content must come from the database so admin changes reflect instantly for users.
+
+User Management (Admin)
+Approval Requests
+
+When a user signs up:
+
+Request appears in Admin → Approval Requests
+
+Admin actions:
+
+Approve → user becomes active
+
+Reject → request removed
+
+User Table
+
+Admin can view:
+
+Email
+
+Role
+
+Status (Active / Pending)
+
+Online / Offline
+
+Last active time
+
+Settings
+Admin Settings
+
+Change admin passwords
+
+Manage system-level settings
+
+User Settings
+
+Update profile details
+
+Change password
+
+Database Requirements (Neon)
+
+Design proper tables for:
+
+users
+
+approval_requests
+
+tasks
+
+task_comments
+
+packages
+
+package_tiers
+
+activity_logs
+
+Use:
+
+Foreign keys
+
+Indexing
+
+Timestamps
+
+Secure password hashing
+
+Security Rules
+
+Passwords must be hashed
+
+No hardcoded credentials in frontend
+
+Role-based route protection
+
+Admin-only APIs protected
+
+Environment variables for secrets
+
+UI & UX Requirements
+
+Dark, premium theme
+
+Clean spacing
+
+Card-based layouts
+
+Tables with filters
+
+Responsive design
+
+No placeholder buttons
+
+Every button must perform a real action
+
+Final Instruction
+
+This is NOT a demo app.
+This is a real internal production-ready Team Management Web App.
+
+Every feature described above must:
+
+Exist
+
+Be connected to the database
+
+Be role-restricted
+
+Be fully functional
+
+Build the app in a modular, maintainable way so features can be extended later without rewriting the whole system.
+
+
+My neon connection string : psql 'postgresql://neondb_owner:npg_4uws8vlyrCec@ep-polished-surf-a1ii39gu-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
+
+My company/ project name is PartOfU.
+I have also attached the logo of my company.
+I am giving all the permission of neon to you.
+Keep dark theme.
+Admin email : paraj.panchani.2006
+Admin password : paraj2006
+Use this admin data to login the admin, further admin can change this from the settings in web app.
+
+Minor bug (Here the admin email is a email as paraj.panchani.2006@gmail.com not just a username, and after giving correct details, the app says welcome back, the blue loader comes and then again I am redirected to the signup page only again & again, please solve this issue
+)
+
+Please complete the project by keeping this all thing in mind.
