@@ -43,23 +43,35 @@ export async function PATCH(request: NextRequest) {
     const { userId, action, role } = await request.json()
 
     if (action === "approve") {
-      await sql`UPDATE users SET status = 'active', updated_at = NOW() WHERE id = ${userId}`
+      await sql`UPDATE users SET status = 'active', updated_at = NOW() WHERE id = ${Number(userId)}`
       await sql`
         INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details)
-        VALUES (${session.userId}, 'approve_user', 'user', ${userId}, 'Approved user')
+        VALUES (${Number(session.userId)}, 'approve_user', 'user', ${Number(userId)}, 'Approved user')
       `
     } else if (action === "reject") {
-      await sql`UPDATE users SET status = 'rejected', updated_at = NOW() WHERE id = ${userId}`
+      await sql`UPDATE users SET status = 'rejected', updated_at = NOW() WHERE id = ${Number(userId)}`
       await sql`
         INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details)
-        VALUES (${session.userId}, 'reject_user', 'user', ${userId}, 'Rejected user')
+        VALUES (${Number(session.userId)}, 'reject_user', 'user', ${Number(userId)}, 'Rejected user')
       `
     } else if (action === "deactivate") {
-      await sql`UPDATE users SET status = 'inactive', updated_at = NOW() WHERE id = ${userId}`
+      await sql`UPDATE users SET status = 'inactive', updated_at = NOW() WHERE id = ${Number(userId)}`
+      await sql`
+        INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details)
+        VALUES (${Number(session.userId)}, 'deactivate_user', 'user', ${Number(userId)}, 'Deactivated user')
+      `
     } else if (action === "activate") {
-      await sql`UPDATE users SET status = 'active', updated_at = NOW() WHERE id = ${userId}`
+      await sql`UPDATE users SET status = 'active', updated_at = NOW() WHERE id = ${Number(userId)}`
+      await sql`
+        INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details)
+        VALUES (${Number(session.userId)}, 'activate_user', 'user', ${Number(userId)}, 'Activated user')
+      `
     } else if (action === "change_role" && role) {
-      await sql`UPDATE users SET role = ${role}, updated_at = NOW() WHERE id = ${userId}`
+      await sql`UPDATE users SET role = ${role}, updated_at = NOW() WHERE id = ${Number(userId)}`
+      await sql`
+        INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details)
+        VALUES (${Number(session.userId)}, 'change_role', 'user', ${Number(userId)}, ${`Changed role to ${role}`})
+      `
     }
 
     return NextResponse.json({ success: true })

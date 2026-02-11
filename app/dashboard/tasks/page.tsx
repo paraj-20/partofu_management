@@ -108,15 +108,29 @@ export default function TasksPage() {
   }
 
   async function handleQuickStatus(taskId: number, newStatus: string) {
+    if (!tasksData) return
+
+    // Optimistic Update: Update the local cache immediately
+    const updatedTasks = tasks.map(t =>
+      t.id === taskId ? { ...t, status: newStatus } : t
+    )
+
+    mutate({ ...tasksData, tasks: updatedTasks }, false)
+
     try {
-      await fetch("/api/tasks", {
+      const res = await fetch("/api/tasks", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ taskId, status: newStatus }),
       })
+      if (!res.ok) throw new Error()
+
+      // Revalidate to ensure server state matches
       mutate()
     } catch {
-      toast.error("Failed to update")
+      toast.error("Failed to update status")
+      // Rollback on error
+      mutate()
     }
   }
 

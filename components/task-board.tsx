@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useMemo, memo } from "react"
 import {
     DndContext,
     DragOverlay,
@@ -75,12 +75,12 @@ function statusLabel(status: string) {
     }
 }
 
-function SortableTaskCard({ task, onEdit, onDelete, currentUser }: {
+const SortableTaskCard = memo(({ task, onEdit, onDelete, currentUser }: {
     task: TaskItem,
     onEdit: (t: TaskItem) => void,
     onDelete: (id: number) => void,
     currentUser: any
-}) {
+}) => {
     const {
         attributes,
         listeners,
@@ -148,7 +148,8 @@ function SortableTaskCard({ task, onEdit, onDelete, currentUser }: {
             </Card>
         </div>
     )
-}
+})
+SortableTaskCard.displayName = "SortableTaskCard"
 
 function Column({ id, title, tasks, onEdit, onDelete, currentUser, color }: {
     id: string,
@@ -221,11 +222,11 @@ export function TaskBoard({ tasks, onStatusChange, onEdit, onDelete, currentUser
         { id: "completed", title: "Completed", color: "bg-[hsl(var(--success))] shadow-[0_0_8px_rgba(var(--success),0.4)]" },
     ]
 
-    const tasksByColumn = {
+    const tasksByColumn = useMemo(() => ({
         todo: tasks.filter(t => t.status === "todo"),
         in_progress: tasks.filter(t => t.status === "in_progress"),
         completed: tasks.filter(t => t.status === "completed"),
-    }
+    }), [tasks])
 
     function handleDragStart(event: DragStartEvent) {
         const { active } = event

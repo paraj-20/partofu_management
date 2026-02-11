@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PackageDialog } from "@/components/package-dialog"
 import { toast } from "sonner"
-import { Plus, Edit3, Trash2, Check, Code, Palette, TrendingUp, Users } from "lucide-react"
+import { Plus, Edit3, Trash2, Check, X, Code, Palette, TrendingUp, Users } from "lucide-react"
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
@@ -191,37 +191,73 @@ export default function PackagesPage() {
                   <p className="text-muted-foreground text-sm">No tiers configured</p>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {pkg.tiers.map((tier) => (
-                      <div
-                        key={tier.id}
-                        className="border border-border rounded-lg p-4 bg-secondary/30"
-                      >
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="text-sm font-semibold text-foreground">{tier.name}</h4>
-                          <Badge variant="outline" className="text-primary border-primary/30">
-                            {tier.price || "Custom"}
-                          </Badge>
+                    {(() => {
+                      // Compute unique features across all tiers to create a comparison matrix
+                      // We preserve the order by looking at tiers in sequence
+                      const allFeatures: string[] = []
+                      pkg.tiers.forEach(tier => {
+                        tier.features.forEach(f => {
+                          if (!allFeatures.includes(f)) {
+                            allFeatures.push(f)
+                          }
+                        })
+                      })
+
+                      return pkg.tiers.map((tier) => (
+                        <div
+                          key={tier.id}
+                          className="border border-border rounded-lg p-4 bg-secondary/30 flex flex-col h-full"
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-sm font-semibold text-foreground">{tier.name}</h4>
+                            <Badge variant="outline" className="text-primary border-primary/30">
+                              {tier.price || "Custom"}
+                            </Badge>
+                          </div>
+
+                          {tier.scope && (
+                            <p className="text-xs text-muted-foreground mb-4 line-clamp-2 min-h-[2.5rem]">
+                              {tier.scope}
+                            </p>
+                          )}
+
+                          <div className="flex-1">
+                            <ul className="flex flex-col gap-2.5 mb-4">
+                              {(() => {
+                                // Double check uniqueness with trimmed values
+                                const uniqueSorted = Array.from(new Set(allFeatures.map(f => f.trim()))).filter(Boolean);
+
+                                return uniqueSorted.map((f, i) => {
+                                  const hasFeature = tier.features.some(tf => tf.trim() === f)
+                                  return (
+                                    <li
+                                      key={i}
+                                      className="flex items-start gap-2 text-xs text-foreground font-medium"
+                                    >
+                                      {hasFeature ? (
+                                        <Check className="h-3.5 w-3.5 text-[hsl(var(--success))] mt-0.5 flex-shrink-0" />
+                                      ) : (
+                                        <X className="h-3.5 w-3.5 text-destructive mt-0.5 flex-shrink-0" />
+                                      )}
+                                      <span className="leading-tight">{f}</span>
+                                    </li>
+                                  )
+                                })
+                              })()}
+                            </ul>
+                          </div>
+
+                          {tier.ideal_for && (
+                            <div className="pt-3 border-t border-border/50 mt-auto">
+                              <p className="text-[10px] text-muted-foreground italic">
+                                <span className="font-semibold not-italic mr-1 text-[9px] uppercase tracking-wider">Best for:</span>
+                                {tier.ideal_for}
+                              </p>
+                            </div>
+                          )}
                         </div>
-                        {tier.scope && (
-                          <p className="text-xs text-muted-foreground mb-3">{tier.scope}</p>
-                        )}
-                        {tier.features.length > 0 && (
-                          <ul className="flex flex-col gap-1.5 mb-3">
-                            {tier.features.map((f, i) => (
-                              <li key={i} className="flex items-start gap-2 text-xs text-foreground">
-                                <Check className="h-3 w-3 text-[hsl(var(--success))] mt-0.5 flex-shrink-0" />
-                                {f}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                        {tier.ideal_for && (
-                          <p className="text-[10px] text-muted-foreground">
-                            Ideal for: {tier.ideal_for}
-                          </p>
-                        )}
-                      </div>
-                    ))}
+                      ))
+                    })()}
                   </div>
                 )}
               </CardContent>

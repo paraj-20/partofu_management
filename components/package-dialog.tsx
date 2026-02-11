@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { toast } from "sonner"
-import { Loader2, Plus, X, Trash2 } from "lucide-react"
+import { Loader2, Plus, X, Trash2, ChevronUp, ChevronDown } from "lucide-react"
 
 type Tier = {
   name: string
@@ -110,6 +110,18 @@ export function PackageDialog({
   function updateFeature(tierIndex: number, featureIndex: number, value: string) {
     const newTiers = [...tiers]
     newTiers[tierIndex].features[featureIndex] = value
+    setTiers(newTiers)
+  }
+
+  function moveFeature(tierIndex: number, featureIndex: number, direction: 'up' | 'down') {
+    const newTiers = [...tiers]
+    const features = [...newTiers[tierIndex].features]
+    if (direction === 'up' && featureIndex > 0) {
+      [features[featureIndex], features[featureIndex - 1]] = [features[featureIndex - 1], features[featureIndex]]
+    } else if (direction === 'down' && featureIndex < features.length - 1) {
+      [features[featureIndex], features[featureIndex + 1]] = [features[featureIndex + 1], features[featureIndex]]
+    }
+    newTiers[tierIndex].features = features
     setTiers(newTiers)
   }
 
@@ -243,10 +255,34 @@ export function PackageDialog({
 
                   {/* Features Management */}
                   <div className="flex flex-col gap-2 mb-4">
-                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Key Features</Label>
+                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Key Features (Order matters for comparison)</Label>
                     <div className="flex flex-col gap-2">
                       {tier.features.map((feature, fIndex) => (
-                        <div key={fIndex} className="flex gap-2">
+                        <div key={fIndex} className="flex gap-2 items-center">
+                          <div className="flex flex-col gap-0.5">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 text-muted-foreground hover:text-primary transition-colors"
+                              onClick={() => moveFeature(i, fIndex, 'up')}
+                              disabled={fIndex === 0}
+                            >
+                              <ChevronUp className="h-3 w-3" />
+                              <span className="sr-only">Move up</span>
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 text-muted-foreground hover:text-primary transition-colors"
+                              onClick={() => moveFeature(i, fIndex, 'down')}
+                              disabled={fIndex === tier.features.length - 1}
+                            >
+                              <ChevronDown className="h-3 w-3" />
+                              <span className="sr-only">Move down</span>
+                            </Button>
+                          </div>
                           <Input
                             value={feature}
                             onChange={(e) => updateFeature(i, fIndex, e.target.value)}
