@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import useSWR from "swr"
+import useSWR, { mutate as globalMutate } from "swr"
 import { useAuth } from "@/hooks/use-auth"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -20,7 +20,19 @@ import {
   ArrowUpCircle,
   ArrowRightCircle,
   ArrowDownCircle,
+  LayoutGrid,
+  Table as TableIcon,
+  List as ListIcon,
+  Columns as BoardIcon
 } from "lucide-react"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { TaskBoard } from "@/components/task-board"
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
@@ -153,7 +165,7 @@ export default function TasksPage() {
 
   function TaskCard({ task }: { task: TaskItem }) {
     const isExpanded = expandedTask === task.id
-    const canDelete = user?.role === "admin" || task.created_by === user?.userId
+    const canDelete = true // Everyone can delete as per latest request
 
     return (
       <Card className="bg-card border-border">
@@ -338,9 +350,23 @@ export default function TasksPage() {
       </div>
 
       <Tabs defaultValue="board" className="w-full">
-        <TabsList className="bg-secondary">
-          <TabsTrigger value="board">Board</TabsTrigger>
-          <TabsTrigger value="list">List</TabsTrigger>
+        <TabsList className="bg-secondary/50 p-1">
+          <TabsTrigger value="board" className="gap-2">
+            <BoardIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">Board</span>
+          </TabsTrigger>
+          <TabsTrigger value="list" className="gap-2">
+            <ListIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">List</span>
+          </TabsTrigger>
+          <TabsTrigger value="grid" className="gap-2">
+            <LayoutGrid className="h-4 w-4" />
+            <span className="hidden sm:inline">Grid</span>
+          </TabsTrigger>
+          <TabsTrigger value="compact" className="gap-2">
+            <TableIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">Compact</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="board" className="mt-6">
@@ -367,6 +393,109 @@ export default function TasksPage() {
             )}
           </div>
         </TabsContent>
+
+        <TabsContent value="grid">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredTasks.length === 0 ? (
+              <p className="col-span-full text-muted-foreground text-sm text-center py-12">
+                No tasks found.
+              </p>
+            ) : (
+              filteredTasks.map((t) => <TaskCard key={t.id} task={t} />)
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="compact">
+          <Card className="bg-card border-border overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-secondary/30 hover:bg-secondary/30">
+                    <TableHead className="w-[300px]">Task</TableHead>
+                    <TableHead>Priority</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Due Date</TableHead>
+                    <TableHead>Assignees</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredTasks.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        No tasks found.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredTasks.map((task) => (
+                      <TableRow key={task.id} className="hover:bg-secondary/20 transition-colors">
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium text-sm text-foreground">{task.title}</span>
+                            <span className="text-[10px] text-muted-foreground truncate max-w-[250px]">
+                              {task.description}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {priorityIcon(task.priority)}
+                            <span className="capitalize text-xs">{task.priority}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>{statusLabel(task.status)}</TableCell>
+                        <TableCell>
+                          <span className="text-xs text-muted-foreground">
+                            {task.due_date ? new Date(task.due_date).toLocaleDateString() : "-"}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex -space-x-1.5 overflow-hidden">
+                            {task.assignees.map((a) => (
+                              <div
+                                key={a.id}
+                                className="h-6 w-6 rounded-full border-2 border-card bg-primary/20 flex items-center justify-center text-primary text-[10px] font-bold"
+                                title={a.name}
+                              >
+                                {a.name?.charAt(0)?.toUpperCase()}
+                              </div>
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                              onClick={() => {
+                                setEditTask(task)
+                                setDialogOpen(true)
+                              }}
+                            >
+                              <Edit3 className="h-4 w-4" />
+                            </Button>
+                            {true && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                onClick={() => handleDelete(task.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       <TaskDialog
@@ -374,7 +503,10 @@ export default function TasksPage() {
         onOpenChange={setDialogOpen}
         task={editTask}
         users={teamUsers}
-        onSuccess={() => mutate()}
+        onSuccess={() => {
+          mutate()
+          globalMutate("/api/notifications")
+        }}
       />
     </div>
   )

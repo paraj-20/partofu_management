@@ -7,6 +7,7 @@ import {
     closestCorners,
     KeyboardSensor,
     PointerSensor,
+    TouchSensor,
     useSensor,
     useSensors,
     DragStartEvent,
@@ -98,7 +99,7 @@ const SortableTaskCard = memo(({ task, onEdit, onDelete, currentUser }: {
         zIndex: isDragging ? 50 : 0
     }
 
-    const canDelete = currentUser?.role === "admin" || task.created_by === currentUser?.userId
+    const canDelete = true // Everyone can delete as per latest request
 
     return (
         <div ref={setNodeRef} style={style} className="group relative">
@@ -209,6 +210,12 @@ export function TaskBoard({ tasks, onStatusChange, onEdit, onDelete, currentUser
         useSensor(PointerSensor, {
             activationConstraint: {
                 distance: 8,
+            },
+        }),
+        useSensor(TouchSensor, {
+            activationConstraint: {
+                delay: 250,
+                tolerance: 5,
             },
         }),
         useSensor(KeyboardSensor, {

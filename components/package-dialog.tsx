@@ -22,12 +22,21 @@ import {
 import { toast } from "sonner"
 import { Loader2, Plus, X, Trash2, ChevronUp, ChevronDown } from "lucide-react"
 
+type CustomField = {
+  name: string
+  type: 'text' | 'checkbox' | 'number' | 'dropdown'
+  value: any
+  options?: string
+}
+
 type Tier = {
   name: string
   price: string
   features: string[]
   scope: string
   idealFor: string
+  deliveryTime: string
+  customFields: CustomField[]
 }
 
 type PackageData = {
@@ -41,6 +50,8 @@ type PackageData = {
     features: string[]
     scope: string
     ideal_for: string
+    delivery_time: string
+    custom_fields: CustomField[]
   }[]
 }
 
@@ -58,7 +69,7 @@ export function PackageDialog({
   const [name, setName] = useState("")
   const [category, setCategory] = useState("tech")
   const [description, setDescription] = useState("")
-  const [tiers, setTiers] = useState<Tier[]>([{ name: "", price: "", features: [""], scope: "", idealFor: "" }])
+  const [tiers, setTiers] = useState<Tier[]>([{ name: "", price: "", features: [""], scope: "", idealFor: "", deliveryTime: "3 days", customFields: [] }])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -73,18 +84,20 @@ export function PackageDialog({
           features: t.features && t.features.length > 0 ? t.features : [""],
           scope: t.scope || "",
           idealFor: t.ideal_for || "",
-        })) || [{ name: "", price: "", features: [""], scope: "", idealFor: "" }]
+          deliveryTime: t.delivery_time || "3 days",
+          customFields: t.custom_fields || [],
+        })) || [{ name: "", price: "", features: [""], scope: "", idealFor: "", deliveryTime: "3 days", customFields: [] }]
       )
     } else {
       setName("")
       setCategory("tech")
       setDescription("")
-      setTiers([{ name: "", price: "", features: [""], scope: "", idealFor: "" }])
+      setTiers([{ name: "", price: "", features: [""], scope: "", idealFor: "", deliveryTime: "3 days", customFields: [] }])
     }
   }, [pkg, open])
 
   function addTier() {
-    setTiers([...tiers, { name: "", price: "", features: [""], scope: "", idealFor: "" }])
+    setTiers([...tiers, { name: "", price: "", features: [""], scope: "", idealFor: "", deliveryTime: "3 days", customFields: [] }])
   }
 
   function removeTier(index: number) {
@@ -110,6 +123,24 @@ export function PackageDialog({
   function updateFeature(tierIndex: number, featureIndex: number, value: string) {
     const newTiers = [...tiers]
     newTiers[tierIndex].features[featureIndex] = value
+    setTiers(newTiers)
+  }
+
+  function addCustomField(tierIndex: number) {
+    const newTiers = [...tiers]
+    newTiers[tierIndex].customFields.push({ name: "", type: 'text', value: "" })
+    setTiers(newTiers)
+  }
+
+  function removeCustomField(tierIndex: number, fieldIndex: number) {
+    const newTiers = [...tiers]
+    newTiers[tierIndex].customFields = newTiers[tierIndex].customFields.filter((_, i) => i !== fieldIndex)
+    setTiers(newTiers)
+  }
+
+  function updateCustomField(tierIndex: number, fieldIndex: number, updates: Partial<CustomField>) {
+    const newTiers = [...tiers]
+    newTiers[tierIndex].customFields[fieldIndex] = { ...newTiers[tierIndex].customFields[fieldIndex], ...updates }
     setTiers(newTiers)
   }
 
@@ -236,7 +267,7 @@ export function PackageDialog({
                     <div className="flex flex-col gap-1.5">
                       <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tier Name</Label>
                       <Input
-                        value={tier.name}
+                        value={tier.name || ""}
                         onChange={(e) => updateTier(i, "name", e.target.value)}
                         placeholder="e.g. Starter"
                         className="bg-secondary border-border text-foreground h-9"
@@ -245,11 +276,38 @@ export function PackageDialog({
                     <div className="flex flex-col gap-1.5">
                       <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Price</Label>
                       <Input
-                        value={tier.price}
+                        value={tier.price || ""}
                         onChange={(e) => updateTier(i, "price", e.target.value)}
                         placeholder="e.g. 15,000 INR"
                         className="bg-secondary border-border text-foreground h-9"
                       />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Delivery Time</Label>
+                      <Select value={tier.deliveryTime} onValueChange={(val) => updateTier(i, "deliveryTime", val)}>
+                        <SelectTrigger className="bg-secondary border-border text-foreground h-9">
+                          <SelectValue placeholder="Select delivery time" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-card border-border border-2 max-h-[300px] overflow-y-auto">
+                          <SelectItem value="1 day">1 day</SelectItem>
+                          <SelectItem value="2 days">2 days</SelectItem>
+                          <SelectItem value="3 days">3 days</SelectItem>
+                          <SelectItem value="4 days">4 days</SelectItem>
+                          <SelectItem value="5 days">5 days</SelectItem>
+                          <SelectItem value="7 days">7 days</SelectItem>
+                          <SelectItem value="10 days">10 days</SelectItem>
+                          <SelectItem value="15 days">15 days</SelectItem>
+                          <SelectItem value="20 days">20 days</SelectItem>
+                          <SelectItem value="30 days">30 days</SelectItem>
+                          <SelectItem value="1 month">1 month</SelectItem>
+                          <SelectItem value="2 months">2 months</SelectItem>
+                          <SelectItem value="3 months">3 months</SelectItem>
+                          <SelectItem value="4 months">4 months</SelectItem>
+                          <SelectItem value="5 months">5 months</SelectItem>
+                          <SelectItem value="6 months">6 months</SelectItem>
+                          <SelectItem value="1 year">1 year</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
@@ -310,6 +368,110 @@ export function PackageDialog({
                         onClick={() => addFeature(i)}
                       >
                         <Plus className="h-3.5 w-3.5 mr-1" /> Add Feature
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Custom Fields Management */}
+                  <div className="flex flex-col gap-2 mb-4">
+                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Custom Fields</Label>
+                    <div className="flex flex-col gap-3">
+                      {tier.customFields.map((field, cfIndex) => (
+                        <div key={cfIndex} className="flex flex-col gap-2 p-3 bg-secondary/30 rounded-lg border border-border/40">
+                          <div className="flex gap-2 items-center">
+                            <Input
+                              value={field.name || ""}
+                              onChange={(e) => updateCustomField(i, cfIndex, { name: e.target.value })}
+                              placeholder="Field Label (e.g. Revisions)"
+                              className="bg-secondary border-border text-foreground h-8 flex-1 text-sm"
+                            />
+                            <Select
+                              value={field.type}
+                              onValueChange={(val: any) => updateCustomField(i, cfIndex, { type: val, value: val === 'checkbox' ? false : "" })}
+                            >
+                              <SelectTrigger className="bg-secondary border-border text-foreground h-8 w-[110px] text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="bg-card border-border border-2">
+                                <SelectItem value="text">Text</SelectItem>
+                                <SelectItem value="checkbox">Checkbox</SelectItem>
+                                <SelectItem value="number">Number</SelectItem>
+                                <SelectItem value="dropdown">Dropdown</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                              onClick={() => removeCustomField(i, cfIndex)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+
+                          <div className="pl-1">
+                            {field.type === 'text' && (
+                              <Input
+                                value={field.value || ""}
+                                onChange={(e) => updateCustomField(i, cfIndex, { value: e.target.value })}
+                                placeholder="Value"
+                                className="bg-secondary border-border text-foreground h-8 text-sm"
+                              />
+                            )}
+                            {field.type === 'number' && (
+                              <Input
+                                type="number"
+                                value={field.value ?? ""}
+                                onChange={(e) => updateCustomField(i, cfIndex, { value: e.target.value })}
+                                placeholder="0"
+                                className="bg-secondary border-border text-foreground h-8 text-sm"
+                              />
+                            )}
+                            {field.type === 'checkbox' && (
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={!!field.value}
+                                  onChange={(e) => updateCustomField(i, cfIndex, { value: e.target.checked })}
+                                  className="h-4 w-4 rounded border-border bg-secondary text-primary focus:ring-primary"
+                                />
+                                <span className="text-xs text-muted-foreground">Enabled by default</span>
+                              </div>
+                            )}
+                            {field.type === 'dropdown' && (
+                              <div className="flex flex-col gap-2">
+                                <Input
+                                  value={field.options || ""}
+                                  onChange={(e) => updateCustomField(i, cfIndex, { options: e.target.value })}
+                                  placeholder="Options (comma separated)"
+                                  className="bg-secondary border-border text-foreground h-8 text-sm"
+                                />
+                                {field.options && (
+                                  <Select value={field.value} onValueChange={(val) => updateCustomField(i, cfIndex, { value: val })}>
+                                    <SelectTrigger className="bg-secondary border-border text-foreground h-8 text-sm">
+                                      <SelectValue placeholder="Select default value" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-card border-border border-2 max-h-[200px] overflow-y-auto">
+                                      {field.options.split(',').map(opt => opt.trim()).filter(Boolean).map((opt, idx) => (
+                                        <SelectItem key={idx} value={opt}>{opt}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-fit text-primary h-8 hover:bg-primary/5 px-2 border-primary/20"
+                        onClick={() => addCustomField(i)}
+                      >
+                        <Plus className="h-3.5 w-3.5 mr-1" /> Add Custom Field
                       </Button>
                     </div>
                   </div>

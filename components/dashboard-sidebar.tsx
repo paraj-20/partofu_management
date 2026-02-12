@@ -14,15 +14,20 @@ import {
   Shield,
   ChevronLeft,
   ChevronRight,
+  Bell
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
+import useSWR from "swr"
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/users", label: "Team", icon: Users, adminOnly: false },
   { href: "/dashboard/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/dashboard/packages", label: "Packages", icon: Package },
+  { href: "/dashboard/notifications", label: "Notifications", icon: Bell },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ]
 
@@ -30,6 +35,12 @@ export function DashboardSidebar() {
   const pathname = usePathname()
   const { user, logout } = useAuth()
   const [collapsed, setCollapsed] = useState(false)
+
+  const { data } = useSWR(user ? "/api/notifications" : null, fetcher, {
+    refreshInterval: 30000 // Refresh every 30s
+  })
+
+  const unreadCount = data?.notifications?.filter((n: any) => !n.is_read).length || 0
 
   return (
     <aside
@@ -63,13 +74,20 @@ export function DashboardSidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors relative",
                 isActive
                   ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:bg-secondary hover:text-foreground"
               )}
             >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
+              <div className="relative">
+                <item.icon className="h-5 w-5 flex-shrink-0" />
+                {item.label === "Notifications" && unreadCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[hsl(var(--success))] text-[10px] font-bold text-white border-2 border-card animate-in zoom-in duration-300">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </div>
               {!collapsed && <span>{item.label}</span>}
             </Link>
           )

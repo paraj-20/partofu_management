@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import useSWR from "swr"
+import useSWR, { mutate as globalMutate } from "swr"
 import { useAuth } from "@/hooks/use-auth"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -13,6 +13,12 @@ import { Plus, Edit3, Trash2, Check, X, Code, Palette, TrendingUp, Users } from 
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
+type CustomField = {
+  name: string
+  type: 'text' | 'checkbox' | 'number' | 'dropdown'
+  value: any
+}
+
 type PackageTier = {
   id: number
   name: string
@@ -23,6 +29,8 @@ type PackageTier = {
   add_ons: string[]
   included: string[]
   not_included: string[]
+  delivery_time: string
+  custom_fields: CustomField[]
 }
 
 type PackageItem = {
@@ -210,9 +218,16 @@ export default function PackagesPage() {
                         >
                           <div className="flex items-center justify-between mb-3">
                             <h4 className="text-sm font-semibold text-foreground">{tier.name}</h4>
-                            <Badge variant="outline" className="text-primary border-primary/30">
-                              {tier.price || "Custom"}
-                            </Badge>
+                            <div className="flex flex-col items-end gap-1">
+                              <Badge variant="outline" className="text-primary border-primary/30">
+                                {tier.price || "Custom"}
+                              </Badge>
+                              {tier.delivery_time && (
+                                <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">
+                                  Est: {tier.delivery_time}
+                                </span>
+                              )}
+                            </div>
                           </div>
 
                           {tier.scope && (
@@ -247,6 +262,23 @@ export default function PackagesPage() {
                             </ul>
                           </div>
 
+                          {/* Custom Fields Display */}
+                          {tier.custom_fields && tier.custom_fields.length > 0 && (
+                            <div className="mt-2 pt-3 border-t border-border/40 mb-4">
+                              <h5 className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-2">Details</h5>
+                              <div className="flex flex-col gap-2">
+                                {tier.custom_fields.map((cf, idx) => (
+                                  <div key={idx} className="flex justify-between items-center text-xs">
+                                    <span className="text-muted-foreground">{cf.name}</span>
+                                    <span className="text-foreground font-medium">
+                                      {cf.type === 'checkbox' ? (cf.value ? 'Yes' : 'No') : cf.value || '-'}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
                           {tier.ideal_for && (
                             <div className="pt-3 border-t border-border/50 mt-auto">
                               <p className="text-[10px] text-muted-foreground italic">
@@ -271,7 +303,10 @@ export default function PackagesPage() {
           open={dialogOpen}
           onOpenChange={setDialogOpen}
           pkg={editPkg}
-          onSuccess={() => mutate()}
+          onSuccess={() => {
+            mutate()
+            globalMutate("/api/notifications")
+          }}
         />
       )}
     </div>

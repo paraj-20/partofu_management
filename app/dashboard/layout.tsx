@@ -8,6 +8,7 @@ import { MobileNav } from "@/components/mobile-nav"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 import { Loader2 } from "lucide-react"
+import { NotificationToast } from "@/components/notification-toast"
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading, isError } = useAuth()
@@ -36,6 +37,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex flex-col lg:flex-row min-h-screen bg-background">
       <MobileNav />
       <DashboardSidebar />
+      <NotificationToast />
       <main className="flex-1 overflow-auto">
         <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">{children}</div>
       </main>

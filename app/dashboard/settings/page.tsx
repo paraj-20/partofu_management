@@ -4,6 +4,7 @@ import React from "react"
 
 import { useState } from "react"
 import { useAuth } from "@/hooks/use-auth"
+import { mutate as globalMutate } from "swr"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -41,6 +42,7 @@ export default function SettingsPage() {
 
       toast.success("Profile updated")
       mutate()
+      globalMutate("/api/notifications")
     } catch {
       toast.error("Something went wrong")
     } finally {
@@ -80,6 +82,7 @@ export default function SettingsPage() {
       setCurrentPassword("")
       setNewPassword("")
       setConfirmPassword("")
+      globalMutate("/api/notifications")
     } catch {
       toast.error("Something went wrong")
     } finally {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { sql } from "@/lib/db"
 import { getSession } from "@/lib/auth"
+import { createNotification } from "@/lib/notifications"
 
 export async function GET() {
   try {
@@ -69,6 +70,14 @@ export async function POST(request: NextRequest) {
           VALUES (${Number(taskId)}, ${Number(userId)})
           ON CONFLICT DO NOTHING
         `
+        // Notify assignee
+        await createNotification({
+          userId: Number(userId),
+          type: 'task_assigned',
+          title: 'New Task Assigned',
+          message: `You have been assigned to: ${title}`,
+          link: '/dashboard/tasks'
+        })
       }
     }
 
@@ -116,6 +125,14 @@ export async function PATCH(request: NextRequest) {
           VALUES (${taskId}, ${userId})
           ON CONFLICT DO NOTHING
         `
+        // Notify assignee
+        await createNotification({
+          userId: Number(userId),
+          type: 'task_assigned',
+          title: 'Task Assignment Updated',
+          message: `You have been assigned to or update in task: ${title || 'Existing Task'}`,
+          link: '/dashboard/tasks'
+        })
       }
     }
 
@@ -140,13 +157,15 @@ export async function DELETE(request: NextRequest) {
 
     const { taskId } = await request.json()
 
-    // Only admin or task creator can delete
+    // All authenticated users can delete tasks as per latest request
+    /*
     if (session.role !== "admin") {
       const task = await sql`SELECT created_by FROM tasks WHERE id = ${taskId}`
       if (task.length === 0 || task[0].created_by !== session.userId) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 })
       }
     }
+    */
 
     await sql`DELETE FROM tasks WHERE id = ${taskId}`
 

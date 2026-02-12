@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { sql } from "@/lib/db"
 import { getSession } from "@/lib/auth"
+import { createNotification } from "@/lib/notifications"
 
 export async function GET() {
   try {
@@ -18,7 +19,8 @@ export async function GET() {
               'features', pt.features, 'scope', pt.scope,
               'ideal_for', pt.ideal_for, 'add_ons', pt.add_ons,
               'included', pt.included, 'not_included', pt.not_included,
-              'sort_order', pt.sort_order
+              'sort_order', pt.sort_order, 'delivery_time', pt.delivery_time,
+              'custom_fields', pt.custom_fields
             ) ORDER BY pt.sort_order
           ) FILTER (WHERE pt.id IS NOT NULL), '[]'
         ) as tiers
@@ -63,8 +65,8 @@ export async function POST(request: NextRequest) {
         const tier = tiers[i]
         const price = tier.price === "" || tier.price === undefined ? null : parseFloat(tier.price)
         await sql`
-          INSERT INTO package_tiers (package_id, name, price, features, scope, ideal_for, add_ons, included, not_included, sort_order)
-          VALUES (${packageId}, ${tier.name}, ${price}, ${JSON.stringify(tier.features || [])}, ${tier.scope || ""}, ${tier.idealFor || ""}, ${JSON.stringify(tier.addOns || [])}, ${JSON.stringify(tier.included || [])}, ${JSON.stringify(tier.notIncluded || [])}, ${i})
+          INSERT INTO package_tiers (package_id, name, price, features, scope, ideal_for, add_ons, included, not_included, sort_order, delivery_time, custom_fields)
+          VALUES (${packageId}, ${tier.name}, ${price}, ${JSON.stringify(tier.features || [])}, ${tier.scope || ""}, ${tier.idealFor || ""}, ${JSON.stringify(tier.addOns || [])}, ${JSON.stringify(tier.included || [])}, ${JSON.stringify(tier.notIncluded || [])}, ${i}, ${tier.deliveryTime || null}, ${JSON.stringify(tier.customFields || [])})
         `
       }
     }
@@ -73,6 +75,24 @@ export async function POST(request: NextRequest) {
       INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details)
       VALUES (${Number(session.userId)}, 'create_package', 'package', ${Number(packageId)}, ${`Created package: ${name}`})
     `
+
+    // Notify all active users about the new package
+    try {
+      const activeUsers = await sql`SELECT id FROM users WHERE status = 'active'`
+      for (const u of activeUsers) {
+        if (Number(u.id) !== Number(session.userId)) {
+          await createNotification({
+            userId: Number(u.id),
+            type: 'package_added',
+            title: 'New Package Available',
+            message: `A new package "${name}" has been added to our service offerings.`,
+            link: '/dashboard/packages'
+          })
+        }
+      }
+    } catch (notifyError) {
+      console.error("Error sending package notifications:", notifyError)
+    }
 
     return NextResponse.json({ packageId })
   } catch (error) {
@@ -110,8 +130,8 @@ export async function PATCH(request: NextRequest) {
         const tier = tiers[i]
         const price = tier.price === "" || tier.price === undefined ? null : parseFloat(tier.price)
         await sql`
-          INSERT INTO package_tiers (package_id, name, price, features, scope, ideal_for, add_ons, included, not_included, sort_order)
-          VALUES (${packageId}, ${tier.name}, ${price}, ${JSON.stringify(tier.features || [])}, ${tier.scope || ""}, ${tier.idealFor || ""}, ${JSON.stringify(tier.addOns || [])}, ${JSON.stringify(tier.included || [])}, ${JSON.stringify(tier.notIncluded || [])}, ${i})
+          INSERT INTO package_tiers (package_id, name, price, features, scope, ideal_for, add_ons, included, not_included, sort_order, delivery_time, custom_fields)
+          VALUES (${packageId}, ${tier.name}, ${price}, ${JSON.stringify(tier.features || [])}, ${tier.scope || ""}, ${tier.idealFor || ""}, ${JSON.stringify(tier.addOns || [])}, ${JSON.stringify(tier.included || [])}, ${JSON.stringify(tier.notIncluded || [])}, ${i}, ${tier.deliveryTime || null}, ${JSON.stringify(tier.customFields || [])})
         `
       }
     }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { sql } from "@/lib/db"
 import { getSession, hashPassword, verifyPassword } from "@/lib/auth"
+import { createNotification } from "@/lib/notifications"
 
 export async function PATCH(request: Request) {
   try {
@@ -33,6 +34,14 @@ export async function PATCH(request: Request) {
         INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details)
         VALUES (${Number(session.userId)}, 'update_profile', 'user', ${Number(session.userId)}, 'Updated profile information')
       `
+
+      await createNotification({
+        userId: Number(session.userId),
+        type: 'settings_changed',
+        title: 'Profile Updated',
+        message: 'Your profile information has been successfully updated.',
+        link: '/dashboard/settings'
+      })
     }
 
     // Change password
@@ -56,6 +65,14 @@ export async function PATCH(request: Request) {
         INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details)
         VALUES (${Number(session.userId)}, 'change_password', 'user', ${Number(session.userId)}, 'Changed account password')
       `
+
+      await createNotification({
+        userId: Number(session.userId),
+        type: 'settings_changed',
+        title: 'Password Changed',
+        message: 'Your account password has been successfully updated.',
+        link: '/dashboard/settings'
+      })
     }
 
     return NextResponse.json({ success: true })
