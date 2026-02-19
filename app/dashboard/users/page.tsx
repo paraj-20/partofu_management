@@ -129,7 +129,7 @@ export default function UsersPage() {
               {u.role}
             </Badge>
           </div>
-          {isAdmin && u.id !== currentUser?.userId && (
+          {isAdmin && u.id !== currentUser?.userId && u.id !== 1 && (
             <div className="flex items-center gap-1">
               {u.status === "pending" && (
                 <div className="flex items-center gap-1 mr-2">

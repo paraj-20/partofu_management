@@ -42,6 +42,11 @@ export async function PATCH(request: NextRequest) {
 
     const { userId, action, role } = await request.json()
 
+    // Protect Root Admin (ID 1) from being modified by others
+    if (Number(userId) === 1 && session.userId !== 1) {
+      return NextResponse.json({ error: "Cannot modify root admin" }, { status: 403 })
+    }
+
     if (action === "approve") {
       await sql`UPDATE users SET status = 'active', updated_at = NOW() WHERE id = ${Number(userId)}`
       await sql`
@@ -89,6 +94,10 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { userId } = await request.json()
+
+    if (Number(userId) === 1) {
+      return NextResponse.json({ error: "Cannot delete root admin" }, { status: 403 })
+    }
 
     if (userId === session.userId) {
       return NextResponse.json({ error: "Cannot delete yourself" }, { status: 400 })

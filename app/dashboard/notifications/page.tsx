@@ -159,6 +159,15 @@ export default function NotificationsPage() {
                                                     {!n.is_read && (
                                                         <Badge className="bg-primary text-primary-foreground text-[10px] h-4 px-1 rounded-full border-0">New</Badge>
                                                     )}
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6 text-muted-foreground hover:text-foreground hidden sm:flex"
+                                                        onClick={() => handleDelete(n.id)}
+                                                    >
+                                                        <X className="h-3.5 w-3.5" />
+                                                        <span className="sr-only">Close</span>
+                                                    </Button>
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
                                                             <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">

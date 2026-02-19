@@ -20,9 +20,27 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { toast } from "sonner"
-import { Loader2, Plus, X, Trash2, ChevronUp, ChevronDown } from "lucide-react"
+import { Loader2, Plus, X, Trash2, ChevronUp, ChevronDown, GripVertical } from "lucide-react"
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core"
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 
 type CustomField = {
+  id?: string
   name: string
   type: 'text' | 'checkbox' | 'number' | 'dropdown'
   value: any
@@ -55,6 +73,41 @@ type PackageData = {
   }[]
 }
 
+
+function SortableCustomFieldItem({ id, children }: { id: string, children: React.ReactNode }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : "auto",
+    position: "relative" as const,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} className="relative group">
+      <div
+        {...attributes}
+        {...listeners}
+        className="absolute left-2 top-3 cursor-grab text-muted-foreground/50 hover:text-foreground z-10 p-1 hover:bg-muted/50 rounded"
+      >
+        <GripVertical className="h-4 w-4" />
+      </div>
+      <div className="pl-6">
+        {children}
+      </div>
+    </div>
+  )
+}
+
 export function PackageDialog({
   open,
   onOpenChange,
@@ -72,6 +125,13 @@ export function PackageDialog({
   const [tiers, setTiers] = useState<Tier[]>([{ name: "", price: "", features: [""], scope: "", idealFor: "", deliveryTime: "3 days", customFields: [] }])
   const [loading, setLoading] = useState(false)
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
   useEffect(() => {
     if (pkg) {
       setName(pkg.name || "")
@@ -85,7 +145,7 @@ export function PackageDialog({
           scope: t.scope || "",
           idealFor: t.ideal_for || "",
           deliveryTime: t.delivery_time || "3 days",
-          customFields: t.custom_fields || [],
+          customFields: t.custom_fields?.map(cf => ({ ...cf, id: cf.id || crypto.randomUUID() })) || [],
         })) || [{ name: "", price: "", features: [""], scope: "", idealFor: "", deliveryTime: "3 days", customFields: [] }]
       )
     } else {
@@ -97,7 +157,25 @@ export function PackageDialog({
   }, [pkg, open])
 
   function addTier() {
-    setTiers([...tiers, { name: "", price: "", features: [""], scope: "", idealFor: "", deliveryTime: "3 days", customFields: [] }])
+    // Find tier with most content (features + custom fields) to use as template
+    const richestTier = tiers.reduce((prev, current) => {
+      const prevCount = (prev.features?.length || 0) + (prev.customFields?.length || 0)
+      const currentCount = (current.features?.length || 0) + (current.customFields?.length || 0)
+      return currentCount > prevCount ? current : prev
+    }, tiers[0])
+
+    const baseTier = richestTier || tiers[0]
+
+    const newTier: Tier = {
+      name: "",
+      price: "",
+      features: baseTier ? [...baseTier.features] : [""],
+      scope: "",
+      idealFor: "",
+      deliveryTime: "3 days",
+      customFields: baseTier ? baseTier.customFields.map(cf => ({ ...cf, id: crypto.randomUUID(), value: "" })) : []
+    }
+    setTiers([...tiers, newTier])
   }
 
   function removeTier(index: number) {
@@ -110,37 +188,116 @@ export function PackageDialog({
 
   function addFeature(tierIndex: number) {
     const newTiers = [...tiers]
-    newTiers[tierIndex].features.push("")
+
+    // If adding to the first tier, add to all tiers to keep them in sync
+    if (tierIndex === 0) {
+      newTiers.forEach(tier => {
+        tier.features.push("")
+      })
+    } else {
+      newTiers[tierIndex].features.push("")
+    }
+
     setTiers(newTiers)
   }
 
   function removeFeature(tierIndex: number, featureIndex: number) {
     const newTiers = [...tiers]
-    newTiers[tierIndex].features = newTiers[tierIndex].features.filter((_, i) => i !== featureIndex)
+
+    // If removing from the first tier, remove from all tiers
+    if (tierIndex === 0) {
+      newTiers.forEach(tier => {
+        if (tier.features.length > featureIndex) {
+          tier.features = tier.features.filter((_, i) => i !== featureIndex)
+        }
+      })
+    } else {
+      newTiers[tierIndex].features = newTiers[tierIndex].features.filter((_, i) => i !== featureIndex)
+    }
+
     setTiers(newTiers)
   }
 
   function updateFeature(tierIndex: number, featureIndex: number, value: string) {
     const newTiers = [...tiers]
-    newTiers[tierIndex].features[featureIndex] = value
+
+    // If updating first tier, update all subsequent tiers' features at same index
+    if (tierIndex === 0) {
+      newTiers.forEach(tier => {
+        if (tier.features.length > featureIndex) {
+          tier.features[featureIndex] = value
+        }
+      })
+    } else {
+      newTiers[tierIndex].features[featureIndex] = value
+    }
+
     setTiers(newTiers)
   }
 
   function addCustomField(tierIndex: number) {
     const newTiers = [...tiers]
-    newTiers[tierIndex].customFields.push({ name: "", type: 'text', value: "" })
+
+    // If adding to first tier, add to all tiers
+    if (tierIndex === 0) {
+      newTiers.forEach(tier => {
+        tier.customFields.push({ id: crypto.randomUUID(), name: "", type: 'text', value: "" })
+      })
+    } else {
+      newTiers[tierIndex].customFields.push({ id: crypto.randomUUID(), name: "", type: 'text', value: "" })
+    }
+
     setTiers(newTiers)
   }
 
   function removeCustomField(tierIndex: number, fieldIndex: number) {
     const newTiers = [...tiers]
-    newTiers[tierIndex].customFields = newTiers[tierIndex].customFields.filter((_, i) => i !== fieldIndex)
+
+    // If removing from first tier, remove from all tiers
+    if (tierIndex === 0) {
+      newTiers.forEach(tier => {
+        if (tier.customFields.length > fieldIndex) {
+          tier.customFields = tier.customFields.filter((_, i) => i !== fieldIndex)
+        }
+      })
+    } else {
+      newTiers[tierIndex].customFields = newTiers[tierIndex].customFields.filter((_, i) => i !== fieldIndex)
+    }
+
     setTiers(newTiers)
   }
 
   function updateCustomField(tierIndex: number, fieldIndex: number, updates: Partial<CustomField>) {
     const newTiers = [...tiers]
-    newTiers[tierIndex].customFields[fieldIndex] = { ...newTiers[tierIndex].customFields[fieldIndex], ...updates }
+
+    // If updating first tier, sync structural changes (name, type, options) to others
+    if (tierIndex === 0) {
+      newTiers.forEach((tier, i) => {
+        if (i === 0) {
+          tier.customFields[fieldIndex] = { ...tier.customFields[fieldIndex], ...updates }
+        } else {
+          // Only sync structural properties, not the value
+          const structuralUpdates: Partial<CustomField> = {}
+          if ('name' in updates) structuralUpdates.name = updates.name
+          if ('type' in updates) structuralUpdates.type = updates.type
+          if ('options' in updates) structuralUpdates.options = updates.options
+          // If type changes, we might need to reset value or ensure it's valid
+          if ('type' in updates && updates.type === 'checkbox') {
+            // if changing TO checkbox, value probably needs to be boolean false if not already
+            // but let's leave value handling to the specific input change for now, 
+            // or just reset value if type changes? 
+            // User said "details should automatically copied".
+          }
+
+          if (tier.customFields[fieldIndex]) {
+            tier.customFields[fieldIndex] = { ...tier.customFields[fieldIndex], ...structuralUpdates }
+          }
+        }
+      })
+    } else {
+      newTiers[tierIndex].customFields[fieldIndex] = { ...newTiers[tierIndex].customFields[fieldIndex], ...updates }
+    }
+
     setTiers(newTiers)
   }
 
@@ -154,6 +311,26 @@ export function PackageDialog({
     }
     newTiers[tierIndex].features = features
     setTiers(newTiers)
+  }
+
+  function handleDragEnd(event: DragEndEvent, tierIndex: number) {
+    const { active, over } = event
+
+    if (over && active.id !== over.id) {
+      setTiers((items) => {
+        const newTiers = [...items]
+        const tier = { ...newTiers[tierIndex] }
+        newTiers[tierIndex] = tier
+
+        const oldIndex = tier.customFields.findIndex((field) => field.id === active.id)
+        const newIndex = tier.customFields.findIndex((field) => field.id === over.id)
+
+        if (oldIndex !== -1 && newIndex !== -1) {
+          tier.customFields = arrayMove(tier.customFields, oldIndex, newIndex)
+        }
+        return newTiers
+      })
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -376,94 +553,105 @@ export function PackageDialog({
                   <div className="flex flex-col gap-2 mb-4">
                     <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Custom Fields</Label>
                     <div className="flex flex-col gap-3">
-                      {tier.customFields.map((field, cfIndex) => (
-                        <div key={cfIndex} className="flex flex-col gap-2 p-3 bg-secondary/30 rounded-lg border border-border/40">
-                          <div className="flex gap-2 items-center">
-                            <Input
-                              value={field.name || ""}
-                              onChange={(e) => updateCustomField(i, cfIndex, { name: e.target.value })}
-                              placeholder="Field Label (e.g. Revisions)"
-                              className="bg-secondary border-border text-foreground h-8 flex-1 text-sm"
-                            />
-                            <Select
-                              value={field.type}
-                              onValueChange={(val: any) => updateCustomField(i, cfIndex, { type: val, value: val === 'checkbox' ? false : "" })}
-                            >
-                              <SelectTrigger className="bg-secondary border-border text-foreground h-8 w-[110px] text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent className="bg-card border-border border-2">
-                                <SelectItem value="text">Text</SelectItem>
-                                <SelectItem value="checkbox">Checkbox</SelectItem>
-                                <SelectItem value="number">Number</SelectItem>
-                                <SelectItem value="dropdown">Dropdown</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                              onClick={() => removeCustomField(i, cfIndex)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-
-                          <div className="pl-1">
-                            {field.type === 'text' && (
-                              <Input
-                                value={field.value || ""}
-                                onChange={(e) => updateCustomField(i, cfIndex, { value: e.target.value })}
-                                placeholder="Value"
-                                className="bg-secondary border-border text-foreground h-8 text-sm"
-                              />
-                            )}
-                            {field.type === 'number' && (
-                              <Input
-                                type="number"
-                                value={field.value ?? ""}
-                                onChange={(e) => updateCustomField(i, cfIndex, { value: e.target.value })}
-                                placeholder="0"
-                                className="bg-secondary border-border text-foreground h-8 text-sm"
-                              />
-                            )}
-                            {field.type === 'checkbox' && (
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="checkbox"
-                                  checked={!!field.value}
-                                  onChange={(e) => updateCustomField(i, cfIndex, { value: e.target.checked })}
-                                  className="h-4 w-4 rounded border-border bg-secondary text-primary focus:ring-primary"
-                                />
-                                <span className="text-xs text-muted-foreground">Enabled by default</span>
-                              </div>
-                            )}
-                            {field.type === 'dropdown' && (
-                              <div className="flex flex-col gap-2">
-                                <Input
-                                  value={field.options || ""}
-                                  onChange={(e) => updateCustomField(i, cfIndex, { options: e.target.value })}
-                                  placeholder="Options (comma separated)"
-                                  className="bg-secondary border-border text-foreground h-8 text-sm"
-                                />
-                                {field.options && (
-                                  <Select value={field.value} onValueChange={(val) => updateCustomField(i, cfIndex, { value: val })}>
-                                    <SelectTrigger className="bg-secondary border-border text-foreground h-8 text-sm">
-                                      <SelectValue placeholder="Select default value" />
+                      <DndContext
+                        id={`dnd-tier-${i}`}
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={(event) => handleDragEnd(event, i)}
+                      >
+                        <SortableContext items={tier.customFields.map((field) => field.id || "")} strategy={verticalListSortingStrategy}>
+                          {tier.customFields.map((field, cfIndex) => (
+                            <SortableCustomFieldItem key={field.id || cfIndex} id={field.id || ""}>
+                              <div className="flex flex-col gap-2 p-3 bg-secondary/30 rounded-lg border border-border/40">
+                                <div className="flex gap-2 items-center">
+                                  <Input
+                                    value={field.name || ""}
+                                    onChange={(e) => updateCustomField(i, cfIndex, { name: e.target.value })}
+                                    placeholder="Field Label (e.g. Revisions)"
+                                    className="bg-secondary border-border text-foreground h-8 flex-1 text-sm"
+                                  />
+                                  <Select
+                                    value={field.type}
+                                    onValueChange={(val: any) => updateCustomField(i, cfIndex, { type: val, value: val === 'checkbox' ? false : "" })}
+                                  >
+                                    <SelectTrigger className="bg-secondary border-border text-foreground h-8 w-[110px] text-xs">
+                                      <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-card border-border border-2 max-h-[200px] overflow-y-auto">
-                                      {field.options.split(',').map(opt => opt.trim()).filter(Boolean).map((opt, idx) => (
-                                        <SelectItem key={idx} value={opt}>{opt}</SelectItem>
-                                      ))}
+                                    <SelectContent className="bg-card border-border border-2">
+                                      <SelectItem value="text">Text</SelectItem>
+                                      <SelectItem value="checkbox">Checkbox</SelectItem>
+                                      <SelectItem value="number">Number</SelectItem>
+                                      <SelectItem value="dropdown">Dropdown</SelectItem>
                                     </SelectContent>
                                   </Select>
-                                )}
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                    onClick={() => removeCustomField(i, cfIndex)}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+
+                                <div className="pl-1">
+                                  {field.type === 'text' && (
+                                    <Input
+                                      value={field.value || ""}
+                                      onChange={(e) => updateCustomField(i, cfIndex, { value: e.target.value })}
+                                      placeholder="Value"
+                                      className="bg-secondary border-border text-foreground h-8 text-sm"
+                                    />
+                                  )}
+                                  {field.type === 'number' && (
+                                    <Input
+                                      type="number"
+                                      value={field.value ?? ""}
+                                      onChange={(e) => updateCustomField(i, cfIndex, { value: e.target.value })}
+                                      placeholder="0"
+                                      className="bg-secondary border-border text-foreground h-8 text-sm"
+                                    />
+                                  )}
+                                  {field.type === 'checkbox' && (
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        type="checkbox"
+                                        checked={!!field.value}
+                                        onChange={(e) => updateCustomField(i, cfIndex, { value: e.target.checked })}
+                                        className="h-4 w-4 rounded border-border bg-secondary text-primary focus:ring-primary"
+                                      />
+                                      <span className="text-xs text-muted-foreground">Enabled by default</span>
+                                    </div>
+                                  )}
+                                  {field.type === 'dropdown' && (
+                                    <div className="flex flex-col gap-2">
+                                      <Input
+                                        value={field.options || ""}
+                                        onChange={(e) => updateCustomField(i, cfIndex, { options: e.target.value })}
+                                        placeholder="Options (comma separated)"
+                                        className="bg-secondary border-border text-foreground h-8 text-sm"
+                                      />
+                                      {field.options && (
+                                        <Select value={field.value} onValueChange={(val) => updateCustomField(i, cfIndex, { value: val })}>
+                                          <SelectTrigger className="bg-secondary border-border text-foreground h-8 text-sm">
+                                            <SelectValue placeholder="Select default value" />
+                                          </SelectTrigger>
+                                          <SelectContent className="bg-card border-border border-2 max-h-[200px] overflow-y-auto">
+                                            {field.options.split(',').map(opt => opt.trim()).filter(Boolean).map((opt, idx) => (
+                                              <SelectItem key={idx} value={opt}>{opt}</SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                            </SortableCustomFieldItem>
+                          ))}
+                        </SortableContext>
+                      </DndContext>
                       <Button
                         type="button"
                         variant="outline"
