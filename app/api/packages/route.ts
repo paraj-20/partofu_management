@@ -27,7 +27,7 @@ export async function GET() {
       FROM packages p
       LEFT JOIN package_tiers pt ON p.id = pt.package_id
       GROUP BY p.id
-      ORDER BY p.created_at DESC
+      ORDER BY p.sort_order ASC, p.created_at DESC
     `
 
     return NextResponse.json({ packages })

@@ -182,6 +182,16 @@ export function PackageDialog({
     setTiers(tiers.filter((_, i) => i !== index))
   }
 
+  function moveTier(tierIndex: number, direction: 'up' | 'down') {
+    const newTiers = [...tiers]
+    if (direction === 'up' && tierIndex > 0) {
+      [newTiers[tierIndex], newTiers[tierIndex - 1]] = [newTiers[tierIndex - 1], newTiers[tierIndex]]
+    } else if (direction === 'down' && tierIndex < newTiers.length - 1) {
+      [newTiers[tierIndex], newTiers[tierIndex + 1]] = [newTiers[tierIndex + 1], newTiers[tierIndex]]
+    }
+    setTiers(newTiers)
+  }
+
   function updateTier(index: number, field: keyof Tier, value: any) {
     setTiers(tiers.map((t, i) => (i === index ? { ...t, [field]: value } : t)))
   }
@@ -431,15 +441,33 @@ export function PackageDialog({
             <div className="flex flex-col gap-4">
               {tiers.map((tier, i) => (
                 <div key={i} className="border border-border/60 rounded-xl p-5 bg-secondary/10 relative group hover:border-primary/30 transition-colors">
-                  {tiers.length > 1 && (
+                  <div className="absolute top-4 right-4 flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                     <button
                       type="button"
-                      onClick={() => removeTier(i)}
-                      className="absolute top-4 right-4 text-muted-foreground hover:text-destructive p-1 rounded-md hover:bg-destructive/10 transition-colors"
+                      onClick={() => moveTier(i, 'up')}
+                      disabled={i === 0}
+                      className="text-muted-foreground hover:text-primary p-1 rounded-md hover:bg-primary/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed hidden sm:block"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <ChevronUp className="h-4 w-4" />
                     </button>
-                  )}
+                    <button
+                      type="button"
+                      onClick={() => moveTier(i, 'down')}
+                      disabled={i === tiers.length - 1}
+                      className="text-muted-foreground hover:text-primary p-1 rounded-md hover:bg-primary/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed hidden sm:block"
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </button>
+                    {tiers.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeTier(i)}
+                        className="text-muted-foreground hover:text-destructive p-1 rounded-md hover:bg-destructive/10 transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                     <div className="flex flex-col gap-1.5">
                       <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tier Name</Label>
